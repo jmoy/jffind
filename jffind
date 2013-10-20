@@ -1,0 +1,111 @@
+#!/usr/bin/env python
+"""
+Find files with keywords in filename.
+
+Author: Jyotirmoy Bhattacharya (jyotirmoy@jyotirmoy.net)
+License: GPL
+"""
+
+USAGE = "jffind <directory> <keyword> ..."
+
+import os
+import os.path
+import re
+import sys
+import icu
+from collections import defaultdict
+
+EXT_WHITELIST = set(["pdf","djvu","djv"])
+
+g_transliterator = icu.Transliterator.createInstance(
+    "NFD; [:Mn:] Remove; NFC; Lower", #no accents; lowercase
+    icu.UTransDirection.FORWARD)
+
+def normalize(s):
+       return g_transliterator.transliterate(s)
+
+def tokenize(s):
+    toks = [x for x in re.split(r'\W|_',s) if x!='']
+    return toks
+
+def path_ext(name):
+    pos = name.rfind('.')
+    if pos==-1:
+        return name,None
+    return name[0:pos],name[pos+1:]
+
+def ngrams(seq,n):
+    l = list(seq)
+    N = len(l)
+    if N<n:
+        return
+    for i in range(0,N-n+1):
+        yield tuple(l[i:i+n])
+
+def gen_path_tokens(top):
+    for dirpath,dirnames,filenames in os.walk(top):
+        for f in filenames:
+            p = os.path.join(dirpath,f)
+            base,ext = path_ext(f)
+            if ext is None or ext.lower() not in EXT_WHITELIST:
+                continue
+            toks_l = tokenize(base)
+            toks_l = [normalize(t) for t in toks_l]
+            toks = set(toks_l)
+            toks |= set(ngrams(toks_l,2))
+            yield (p,toks)
+
+def build_index(root):
+    d = defaultdict(set)
+    for name,toks in gen_path_tokens(root):
+        for t in toks:
+            d[t].add(name)
+    return d
+
+def find(idx,terms):
+    terms = [normalize(t) for t in terms]
+    termset = set(terms)
+    term_2grams = set(ngrams(terms,2))
+    
+    #Find items which match all terms
+    candidates = None
+    for t in terms:
+        if t in idx:
+            c = idx[t]
+            if candidates is None:
+                candidates = c
+            else:
+                candidates &= c
+    if candidates is None:
+        candidates = set()
+
+    #Ranking based on two-gram occurence
+    ranked_res = {c:1 for c in candidates}
+    for t in term_2grams:
+        if t not in idx:
+            continue
+        s = idx[t]
+        for o in s:
+            if o in ranked_res:
+                ranked_res[o] = ranked_res[o]*2
+
+    ans = sorted(((s,o) for (o,s) in ranked_res.items()),reverse=True)
+    ans = [a[1] for a in ans]
+    return ans
+
+if __name__=="__main__":
+    if (len(sys.argv)<3):
+        sys.stderr.write("Usage: "+USAGE+'\n')
+        sys.exit(1)
+
+    root = sys.argv[1]
+    if not os.path.isdir(root):
+        sys.stderr.write("Not a directory: {0}\n".format(root))
+        sys.exit(2)
+
+    idx = build_index(root)
+    ans = find(idx,sys.argv[2:])
+    for c in ans:
+        print(c)
+    
+
