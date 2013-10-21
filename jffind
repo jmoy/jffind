@@ -60,36 +60,25 @@ def build_index(root):
 
 def find(idx,terms):
     terms = [normalize(t) for t in terms]
+    if len(terms)==0:
+        raise ValueError("Empty list of terms in find")
     termset = set(terms)
     term_2grams = set(ngrams(terms,2))
     
     #Find items which match all terms
-    candidates = None
-    for t in terms:
-        if t not in idx: #No document matches term
-            candidates = set()
+    first_term = termset.pop()
+    matches = idx.get(first_term,set())
+    for t in termset:
+        if not matches:
             break
-        c = idx[t]
-        if candidates is None: #First term
-            candidates = c
-        else:
-            candidates &= c
-    if candidates is None:
-        candidates = set()
+        matches &= idx.get(t,set())
 
     #Ranking based on two-gram occurence
-    ranked_res = {c:1 for c in candidates}
-    for t in term_2grams:
-        if t not in idx:
-            continue
-        s = idx[t]
-        for o in s:
-            if o in ranked_res:
-                ranked_res[o] = ranked_res[o]*2
+    def rank(c):
+        return sum(1 for t in term_2grams
+                     if c in idx.get(t,set()))
 
-    ans = sorted(((s,o) for (o,s) in ranked_res.items()),reverse=True)
-    ans = [a[1] for a in ans]
-    return ans
+    return sorted(matches, key = rank, reverse = True)
 
 if __name__=="__main__":
     if (len(sys.argv)<3):
