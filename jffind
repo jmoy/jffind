@@ -66,12 +66,14 @@ def find(idx,terms):
     #Find items which match all terms
     candidates = None
     for t in terms:
-        if t in idx:
-            c = idx[t]
-            if candidates is None:
-                candidates = c
-            else:
-                candidates &= c
+        if t not in idx: #No document matches term
+            candidates = set()
+            break
+        c = idx[t]
+        if candidates is None: #First term
+            candidates = c
+        else:
+            candidates &= c
     if candidates is None:
         candidates = set()
 
