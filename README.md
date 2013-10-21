@@ -9,10 +9,10 @@ USAGE
 
     jffind <directory> <keyword> ...
 
-It prints out the full path of files in <directory> and 
-its subdirectories that contain <keyword>s in the file name. 
+It prints out the full path of files in `<directory>` and 
+its subdirectories that contain `<keyword>`s in the file name. 
 
-Only files with extension in the EXT_WHITELIST set hardcoded
+Only files with extension in the `EXT_WHITELIST` set hardcoded
 in the program are printed. Currently the extensions
 accepted are PDF, DJVU and DJV.
 
