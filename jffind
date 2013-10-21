@@ -15,7 +15,9 @@ import sys
 import icu
 from collections import defaultdict
 
-EXT_WHITELIST = set(["pdf","djvu","djv"])
+# Only files with the following extensions will
+# be shown. Please note the leading period.
+EXT_WHITELIST = set([".pdf",".djvu",".djv"])
 
 g_transliterator = icu.Transliterator.createInstance(
     "NFD; [:Mn:] Remove; NFC; Lower", #no accents; lowercase
@@ -27,12 +29,6 @@ def normalize(s):
 def tokenize(s):
     toks = [x for x in re.split(r'\W|_',s) if x!='']
     return toks
-
-def path_ext(name):
-    pos = name.rfind('.')
-    if pos==-1:
-        return name,None
-    return name[0:pos],name[pos+1:]
 
 def ngrams(seq,n):
     l = list(seq)
@@ -46,8 +42,8 @@ def gen_path_tokens(top):
     for dirpath,dirnames,filenames in os.walk(top):
         for f in filenames:
             p = os.path.join(dirpath,f)
-            base,ext = path_ext(f)
-            if ext is None or ext.lower() not in EXT_WHITELIST:
+            base,ext = os.path.splitext(f)
+            if ext.lower() not in EXT_WHITELIST:
                 continue
             toks_l = tokenize(base)
             toks_l = [normalize(t) for t in toks_l]
